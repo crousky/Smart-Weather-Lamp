@@ -56,7 +56,7 @@ preferences {
 			required: false,
 			style: "external",
 			url: "https://developer.forecast.io/",
-			description: "tap to view SmartThings website in mobile browser")
+			description: "tap to view Forecast.io website in mobile browser")
 	
 			input "apiKey", "text", title: "Enter your new key", required:true
 		}
