@@ -1,21 +1,23 @@
 /**
- *  Color Changing Smart Weather lamp
+ *  ColorCast Weather Lamp
  *
+ *	Inspired by and based in large part on the original Color Changing Smart Weather lamp by Jim Kohlenberger.
+ *	See Jim's original SmartApp at http://community.smartthings.com/t/color-changing-smart-weather-lamp-app/12046 which includes an option for high pollen notifications
  *	
  *	This weather lantern app turns on with motion and turns a Phillips hue (or LifX) lamp different colors based on the weather.  
  *	It uses dark sky's weather API to micro-target weather. 
  *
- *	Weather Lamp Colors
+ *	Colors definitions
  *
- *	Blinking Red 	Weather Watch, Warning or Advisory for your location
- *	Purple 		Rain: It’s raining outside. Triggers when there is greater than 15% chance of rain in this or the next hour
- *	Blue 		Cold: It’s freezing outside
- *	Pink		Snow: There is a chance of snow
- *	Orange 		Hot:  It’s hot outside -- above 90F
- *	Green  		Sneeze: Pollen is in the air - above 7 (polin requires integration with IFTTT that sets a virtual switch in ST 
- *	White		All clear
+ *	Purple 		Rain: Rain is forecast for specified time period.
+ *	Blue 		Cold: It's going to be at or below the specified minimum temperature
+ *	Pink		Snow: Snow is forecast for specified time period.
+ *	Red 		Hot:  It's going to be at or above the specified maximum temperature
+ *	Yellow 		Wind: Wind is forecast to meet or exceed the specified maximum wind speed
+ *	Green		All clear
+ *	Blinking any color indicates that there is a weather advisory for your location
  *
- *  With special thanks to insights from the Flasher script by Bob, the SmartThings Hue mood lighting script, the light on motion script by kennyyork@centralite.com, and the Smartthings severe weather alert script 
+ *  With special thanks to insights from the SmartThings Hue mood lighting script and the light on motion script by kennyyork@centralite.com
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -27,203 +29,234 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
+import java.util.regex.*
+
 definition(
-    name: "Color Changing Smart Weather Light",
-    namespace: "",
-    author: "Jim Kohlenberger",
-    description: "A color changing smart weather lantern app that turns on with motion and turns a hue lamp different colors based on the weather.",
-    category: "",
-    iconUrl: "https://s3.amazonaws.com/smartapp-icons/Developers/smart-light-timer.png",
-    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Developers/smart-light-timer@2x.png",
-    iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Developers/smart-light-timer@2x.png")
+	name: "ColorCast Weather Lamp",
+	namespace: "jdiben",
+	author: "Joe DiBenedetto",
+	description: "Get a simple visual indicator for the days weather whenever you leave home. ColorCast will change the color of one or more Hue or LifX lights to match the weather forecast whenever it senses motion",
+	category: "Convenience",
+	iconUrl: "https://s3.amazonaws.com/smartapp-icons/Developers/smart-light-timer.png",
+	iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Developers/smart-light-timer@2x.png",
+	iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Developers/smart-light-timer@2x.png"
+)
 
-
-
-preferences
-{
-    section("Select Motion Detector") {
-        input "motion_detector", "capability.motionSensor", title: "Where?"
-    }
-    section("Control these bulbs...") {
-		input "hues", "capability.colorControl", title: "Which Hue Bulbs?", required:true, multiple:true
+preferences {
+	page(name: "pageAPI", title: "API Key", nextPage: "pageSettings", install: false, uninstall: true) {
+	
+		section("First Things First") {
+			paragraph "To use this SmartApp you need an API Key from forecast.io (https://developer.forecast.io/). To obtain your key, you will need to register a free account on their site."
+			paragraph "You will be asked for payment information, but you can ignore that part. Payment is only required if you access the data more than 1,000 times per day. If you don't give a credit card number and you somehow manage to exceed the 1,000 calls, the app will stop working until the following day when the counter resets."
 		}
-    section("Set brightness level for lights (100 is max representing 100%, default is 60)") {
-        input "brightnessLevel", "number", title: "Brightess level (without %)?", required: false
-    }
-    section ("Zip code (optional, defaults to location coordinates)...") {
-		input "zipcode", "text", title: "Zip Code", required: false
+	
+		section("API Key") {
+			href(name: "hrefNotRequired",
+			title: "Get your Forecast.io API key",
+			required: false,
+			style: "external",
+			url: "https://developer.forecast.io/",
+			description: "tap to view SmartThings website in mobile browser")
+	
+			input "apiKey", "text", title: "Enter your new key", required:true
+		}
 	}
-    section ("In addition to push notifications, for emergency weather send text alerts to...") {
-		input "phone1", "phone", title: "Phone Number 1", required: false
-		input "phone2", "phone", title: "Phone Number 2", required: false
-		input "phone3", "phone", title: "Phone Number 3", required: false
+	
+	page(name: "pageSettings", title: "", install: true, uninstall: true) {
+		section("Select Motion Detector") {
+			input "motion_detector", "capability.motionSensor", title: "Where?", required:false //Select motion sensor(s). Optional because app can be triggered manually
+		}
+		section("Control these bulbs...") {
+			input "hues", "capability.colorControl", title: "Which Hue Bulbs?", required:true, multiple:true //Select bulbs
+			input "brightnessLevel", "number", title: "Brightness Level (1-100)?", required:false, defaultValue:100 //Select brightness
+		}
+
+		section ("Forecast Range") {
+			// Get the number of hours to look ahead. Weather for the next x hours will be parsed to compare against user specified values.
+			input "lookAheadHours", "enum", title: "Get weather for the next...", options: [
+				"Current conditions", 
+				"1 Hour", 
+				"2 Hours", 
+				"3 Hours", 
+				"4 Hours", 
+				"5 Hours", 
+				"6 Hours", 
+				"7 Hours", 
+				"8 Hours", 
+				"9 Hours", 
+				"10 Hours", 
+				"11 Hours", 
+				"12 Hours", 
+				"13 Hours", 
+				"14 Hours", 
+				"15 Hours", 
+				"16 Hours", 
+				"17 Hours", 
+				"18 Hours", 
+				"19 Hours", 
+				"20 Hours", 
+				"21 Hours", 
+				"22 Hours", 
+				"23 Hours", 
+				"24 Hours"
+			], required: true, defaultValue:"Current conditions"
+		}
+
+		section ("Weather Triggers") {
+			input "tempMinTrigger", "number", title: "Low Temperature", required: false, defaultValue:35 //Set the minumum temperature to trigger the "Cold" color
+			input "tempMaxTrigger", "number", title: "High Temperature", required: false, defaultValue:80 //Set the maximum temperature to trigger the "Hot" color
+			input "windTrigger", "number", title: "High Wind Speed", required: false, defaultValue:24 //Set the maximum temperature to trigger the "Windy" color
+		}
+
+		section([mobileOnly:true]) {
+			label title: "Assign a name", required: false //Allow custom name for app. Usefull if the app is installed multiple times for different modes
+			mode title: "Set for specific mode(s)", required: false //Allow app to be assigned to different modes. Usefull if user wants different setting for different modes
+		}
 	}
-    section ("Optionally set lantern to turn green once, if this switch is turned on.") {
-    	input "mySwitch", "capability.switch", title: "Switch Turned On", required: false, multiple: false
-    }
-    section("Icon") {
-        icon(title: "Select icon for app:", required: true)
-    }
 }
 
 def installed() {
 	log.debug "Installed with settings: ${settings}"
 	initialize()
-    scheduleJob()  
+}
+
+
+def initialize() {
+	log.info "Initializing, subscribing to motion event at ${motionHandler} on ${motion_detector}"
+	subscribe(motion_detector, "motion", motionHandler)
+	subscribe(app, appTouchHandler)
 }
 
 def updated() {
 	log.debug "Updated with settings: ${settings}"
-    log.debug "Weather Light: oldKeys: $oldKeys"
- 
-    unsubscribe()
-    unschedule()
-    scheduleJob()
+	
+	unsubscribe()
+	unschedule()
 	initialize()
 }
 
-def scheduleJob() {
-	def sec = Math.round(Math.floor(Math.random() * 60))
-	def min = 4 
-    def cron = "$sec $min * * * ?"
-    schedule(cron, "turnOff")
-}
 
 def checkForWeather() {
-	def alerts
-    def conditions
-    def color ="Warm White"
-    def statustest
-    def value
-	if(locationIsDefined()) {
-		if(zipcodeIsValid()) {
-			alerts = getWeatherFeature("alerts", zipcode)?.alerts
-            conditions = getWeatherFeature("conditions", zipcode )
-                       
-		} else {
-			log.warn "Severe Weather Alert: Invalid zipcode entered, defaulting to location's zipcode"
-			alerts = getWeatherFeature("alerts")?.alerts
-            conditions = getWeatherFeature("conditions") }
-	} else {
-		log.warn "Severe Weather Alert: Location is not defined"
+	def defaultColor ="Green" //Set the "all clear" color
+
+	def colors = [] //Initialze colors array
+	
+	//Initialize weather events
+	def willRain=false;
+	def willSnow=false;
+	def windy=false;
+	def tempLow
+	def tempHigh
+	def weatherAlert=false
+	
+	def forecastUrl="https://api.forecast.io/forecast/$apiKey/$location.latitude,$location.longitude" //Create api url
+
+	httpGet(forecastUrl) {response -> 
+
+		if (response.data) { //API response was successfull
+			def i=0
+			if (lookAheadHours=="Current conditions") { //Get current weather conditions
+				def currentConditions=response.data.currently
+				if (currentConditions.precipProbability.floatValue()>=0.15) { //Consider it raining/snowing if precip probabilty is greater than 15%
+					if (currentConditions.precipType=='rain') {
+						willRain=true //Precipitation type is rain
+					} else {
+						willSnow=true //Precipitation type is NOT rain. This would include snow, sleet, hail, etc.
+					}
+				}
+				tempLow=tempHigh=currentConditions.temperature //High and low temps are the same for current conditions
+				if (currentConditions.windSpeed>=windTrigger) windy=true //Compare to user defined value for wid speed.
+			} else { //Get hourly data
+				for (hour in response.data.hourly.data){ //Iterate over hourly data
+					if (lookAheadHours.replaceAll(/\D/,"").toInteger()<++i) { //Break if we've processed all of the specified look ahead hours. Need to strip non-numeric characters(i.e. "hours") from string so we can cast to an integer
+						break
+					} else {
+						if (hour.precipProbability.floatValue()>=0.15) { //Consider it raining/snowing if precip probabilty is greater than 15%
+							if (hour.precipType=='rain') {
+								willRain=true //Precipitation type is rain
+							} else {
+								willSnow=true //Precipitation type is NOT rain. This would include snow, sleet, hail, etc.
+							}
+						}
+						if (tempLow==null || tempLow>hour.temperature) tempLow=hour.temperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
+						if (tempHigh==null || tempHigh<hour.temperature) tempHigh=hour.temperature //Compare the stored high temp to the current iteration temp. If it's higher overwrite the stored high with this temp
+						if (hour.windSpeed>=windTrigger) windy=true //Compare to user defined value for wid speed.
+					}
+				}
+			}
+
+			if (response.data.alerts) weatherAlert=true //Is there currently a weather alert
+
+			//Add color strings to the colors array to be processed later
+			if (tempLow<=tempMinTrigger.floatValue()) {
+				colors.push('Blue')
+				log.debug "Cold"
+			}
+			if (tempHigh>=tempMaxTrigger.floatValue()) {
+				colors.push('Red')
+				log.debug "Hot"
+			}
+			if (willSnow) {
+				colors.push('Pink')
+				log.debug "Snow"			
+			}
+			if (willRain) {
+				colors.push('Purple')
+				log.debug "Rain"
+			}
+			if (windy) {
+				colors.push('Yellow')
+				log.debug "Windy"
+			}
+		} else { //API response was NOT successfull
+			log.debug "HttpGet Response data unsuccesful."
+		}
 	}
 
-	log.debug "Weather conditions temp_f: ${conditions.current_observation.temp_f.toInteger()}"
-
-	//  FREEZING BLUE	
-    if (conditions.current_observation.temp_f <= 34 ) {
-        	color = "Blue"
-        log.debug "Weather temp below 34F, its freezing out so setting light to blue."
-    }
-   	
-    //  HOT ORANGE
-	if (conditions.current_observation.temp_f >= 80 )  {
-        color = "Orange"
-        log.debug "Weather temp above 80F, setting light to orange."
-    }
-    
- 
-    //	PURPLE RAIN FORCAST
-	log.debug "Checking Forecast.io Weather"
-	// Visit https://developer.forecast.io/register to get a forecast.io API key and insert it below
-    httpGet("https://api.forecast.io/forecast/8b533da63e8dc7e74a1aa20acaf8ac13/$location.latitude,$location.longitude") {response -> 
-            
-		if (response.data) {
-       		def precipprob = response.data.currently.precipProbability.floatValue() // A numerical value between 0 and 1 (inclusive) representing the probability of precipitation occurring at the given time. 
-			def tempFar = response.data.currently.temperature.floatValue()
-			def thisHour = response.data.hourly.data[0].precipProbability.floatValue() //this top of hour  	
-			def nextHour = response.data.hourly.data[1].precipProbability.floatValue() //next top of hour
-			log.debug "Actual current temp: ${tempFar}, Precipitation probability now: ${precipprob}, thisHour: ${thisHour}, nextHour ${nextHour}"
-    		if ((thisHour >0.15) || (nextHour >0.15)) {
-	    		color = "Purple" 
-    	    	log.debug "Greater than 15% chance of rain in this or the next hour, setting light to Purple."
-    		}
-       	}   else {
-        	log.debug "HttpGet Response data unsuccesful."
-        }
-    }
-    
-    //  PINK SNOW
-    def f = getWeatherFeature("forecast", zipcode) //get("forecast")
-	def f1= f?.forecast?.simpleforecast?.forecastday
-	if (f1) {
-		value = f1[0].snow_day 
+	//If the colors array is empty, assign the "all clear" color
+	if (colors.size()==0) colors.push(defaultColor)
+	
+	def delay=2000 //The amount of time to leave each color on
+	def iterations=1 //The number of times to show each color
+	if (weatherAlert) {
+		//When there's an active weather alert, shorten the duration that each color is shown but show the color multiple times. This will cause individual colors to flash when there is a weather alert
+		delay = 550 
+		iterations=3
 	}
-	else {
-		log.warn "Forecast not found"
-	}
-  	
-  	log.debug "The chance of snow = ${value}"
-    if (!value.toString().contains("0.0")) {
-    	if (!value.toString().contains("null")) {
-    		color = "Pink"
-    		log.debug "Weather shows chance of snow, setting light to Pink."
-        }
-    }
-   
-	sendcolor(color)
-      
-	def newKeys = alerts?.collect{it.type + it.date_epoch} ?: []
-	log.debug "Severe Weather Alert: newKeys: $newKeys"
-
-	def oldKeys = state.alertKeys ?: []
-	log.debug "Severe Weather Alert: oldKeys: $oldKeys"
-
-	if (newKeys != oldKeys) {
-
-		state.alertKeys = newKeys
-
-		alerts.each {alert ->
-			if (!oldKeys.contains(alert.type + alert.date_epoch) && descriptionFilter(alert.description)) {
-                color = "Red"
-                sendcolor(color)
-				flashLights()
-
+	
+	colors.each { //Iterate over each color
+		for (int i = 0; i<iterations; i++) {
+			sendcolor(it) //Turn light on with specified color
+			pause(delay) //leave the light on for the specified time
+			if (weatherAlert) {
+				//If there's a weather alert, turn off the light for the same amount of time it was on
+				//When a weather alert is active, each color will be looped x times, creating the blinking effect by turning the light on then off x times
+				hues.off()
+				pause(delay)
 			}
 		}
 	}
-}
-
-def descriptionFilter(String description) {
-	def filterList = ["special", "statement", "test"]
-	def passesFilter = true
-	filterList.each() { word ->
-		if(description.toLowerCase().contains(word)) { passesFilter = false }
-	}
-	passesFilter
-}
-
-
-def locationIsDefined() {
-	zipcodeIsValid() || location.zipCode || ( location.latitude && location.longitude )
-}
-
-def zipcodeIsValid() {
-	zipcode && zipcode.isNumber() && zipcode.size() == 5
-}
-
-private send(message) {
-	sendPush message
-	if (settings.phone1) {
-		sendSms phone1, message
-	}
-	if (settings.phone2) {
-		sendSms phone2, message
-	}
-	if (settings.phone3) {
-		sendSms phone3, message
-	}
+	
+	setLightsToOriginal() //The colors have been sent to the lamp and all colors have been shown. Now revert the lights to their original settings
 }
 
 def sendcolor(color) {
-	log.debug "Sendcolor = $color"
-    def hueColor = 0
-    def saturation = 100
-
+	//Initialize the hue and saturation
+	def hueColor = 0
+	def saturation = 100
+	
+	//Use the user specified brightness level. If they exceeded the min or max values, overwrite the brightness with the actual min/max
+	if (brightnessLevel<1) {
+		brightnessLevel=1
+	} else if (brightnessLevel>100) {
+		brightnessLevel=100
+	}
+	
+	//Set the hue and saturation for the specified color.
 	switch(color) {
 		case "White":
-			hueColor = 52
-			saturation = 19
+			hueColor = 0
+			saturation = 0
 			break;
 		case "Daylight":
 			hueColor = 53
@@ -235,13 +268,13 @@ def sendcolor(color) {
 			break;
 		case "Warm White":
 			hueColor = 20
-			saturation = 80 //83
+			saturation = 80 
 			break;
 		case "Blue":
-			hueColor = 70
+			hueColor = 65
 			break;
 		case "Green":
-			hueColor = 39
+			hueColor = 33
 			break;
 		case "Yellow":
 			hueColor = 25
@@ -250,129 +283,39 @@ def sendcolor(color) {
 			hueColor = 10
 			break;
 		case "Purple":
-			hueColor = 75
+			hueColor = 82
+			saturation = 100
 			break;
 		case "Pink":
-			hueColor = 83
+			hueColor = 90.78
+			saturation = 67.84
 			break;
 		case "Red":
-			hueColor = 100
+			hueColor = 0
 			break;
 	}
 
-	state.previous = [:]
-
-	hues.each {
-		state.previous[it.id] = [
-			"switch": it.currentValue("switch"),
-			"level" : it.currentValue("level"),
-			"hue": it.currentValue("hue"),
-			"saturation": it.currentValue("saturation")
-           
-		]
-	}
-	
-	log.debug "current values = $state.previous"
-    
-    // CHECK for GREEN button on
-    if (mySwitch != null) {
-    	if (mySwitch.latestValue("switch") == "on" ) {   
-    		log.debug "mySwitch is on so setting light to GREEN and closing switch"
-        	if (color != "Red") { //If its red, then override green
-        		hueColor = 39
-            	mySwitch.off()  
-        	}
-    	}
-    }
-    
-  	def lightLevel = 60
-    if (brightnessLevel != null) {
-    	lightLevel = brightnessLevel 
-    }
-     
-	def newValue = [hue: hueColor, saturation: saturation, level: lightLevel]  
-	log.debug "new value = $newValue"
-
+	//Change the color of the light
+	def newValue = [hue: hueColor, saturation: saturation, level: brightnessLevel]  
 	hues*.setColor(newValue)
 }
 
+
+def setLightsToOriginal() {
+	//This is intended to revert the lights to their original on/off state and original color. Unfortunatly, SmartThings doesn't recognize the original colors when they are set outside of SmartThings by using the Hue, or other, app. At this time it just makes more sense to turn the light off
+	hues.off()
+}
+
 /// HANDLE MOTION
-
-def turnOff() {
-	log.debug "Timer fired, turning off light(s)"
-    hues.off()
-}
-
 def motionHandler(evt) {
-	if (evt.value == "active") {                // If there is movement then...
-        log.debug "Motion detected, turning on light and killing timer"
-        checkForWeather()
-        unschedule( turnOff )                   // ...we don't need to turn it off.
-    }
-    else {                                      // If there is no movement then...
-        def delay = 100 				
-        log.debug "Motion cleared, turning off switches in (${delay})."
-        pause(delay)
-        hues.off()
-    }
+	if (evt.value == "active") {// If there is movement then trigger the weather display
+		log.debug "Motion detected, turning on light"
+		checkForWeather()
+	} 
 }
 
-def initialize() {
-	log.info "Initializing, subscribing to motion event at ${motionHandler} on ${motion_detector}"
-    subscribe(motion_detector, "motion", motionHandler)
-	subscribe(app, appTouchHandler)
-}
-def appTouchHandler(evt) {
-	checkForWeather()
-    def delay = 4000 				
-    log.debug "App triggered with button press, turning off switches in (${delay})."
-    pause(delay)
-    hues.off()
+def appTouchHandler(evt) {// If the button is pressed then trigger the weather display
+	checkForWeather()	
+	log.debug "App triggered with button press."
 }
 
-private flashLights() {
-	def doFlash = true
-	def onFor = onFor ?: 1000
-	def offFor = offFor ?: 1000
-	def numFlashes = numFlashes ?: 3
-
-	log.debug "LAST ACTIVATED IS: ${state.lastActivated}"
-	if (state.lastActivated) {
-		def elapsed = now() - state.lastActivated
-		def sequenceTime = (numFlashes + 1) * (onFor + offFor)
-		doFlash = elapsed > sequenceTime
-		log.debug "DO FLASH: $doFlash, ELAPSED: $elapsed, LAST ACTIVATED: ${state.lastActivated}"
-	}
-
-	if (doFlash) {
-		log.debug "FLASHING $numFlashes times"
-		state.lastActivated = now()
-		log.debug "LAST ACTIVATED SET TO: ${state.lastActivated}"
-		def initialActionOn = switches.collect{it.currentSwitch != "on"}
-		def delay = 1L
-		numFlashes.times {
-			log.trace "Switch on after  $delay msec"
-            hues.eachWithIndex {s, i ->
-				if (initialActionOn[i]) {
-					s.on(delay: delay)
-				}
-				else {
-					s.off(delay:delay)
-				}
-			}
-			delay += onFor
-			log.trace "Switch off after $delay msec"
-            hues.eachWithIndex {s, i ->
-				if (initialActionOn[i]) {
-					s.off(delay: delay)
-				}
-				else {
-					s.on(delay:delay)
-				}
-			}
-			delay += offFor
-		}
-        //delay += offFor
-        //s.off(delay:delay)
-	}
-}
