@@ -4,7 +4,7 @@
  *	Inspired by and based in large part on the original Color Changing Smart Weather lamp by Jim Kohlenberger.
  *	See Jim's original SmartApp at http://community.smartthings.com/t/color-changing-smart-weather-lamp-app/12046 which includes an option for high pollen notifications
  *	
- *	This weather lantern app turns on with motion and turns a Phillips hue (or LifX) lamp different colors based on the weather.  
+ *	This weather lantern app turns on with motion and turns a Phillips hue lamp different colors based on the weather.  
  *	It uses dark sky's weather API to micro-target weather. 
  *
  *	Colors definitions
@@ -14,6 +14,8 @@
  *	Pink		Snow: Snow is forecast for specified time period.
  *	Red 		Hot:  It's going to be at or above the specified maximum temperature
  *	Yellow 		Wind: Wind is forecast to meet or exceed the specified maximum wind speed
+ *	White 		Cloudy: Cloud cover is forecast to meet or exceed the specified maximum
+ *	Orange 		Dew Point: Dew point is forcast to exceed maximum
  *	Green		All clear
  *	Blinking any color indicates that there is a weather advisory for your location
  *
@@ -37,9 +39,9 @@ definition(
 	author: "Joe DiBenedetto",
 	description: "Get a simple visual indicator for the days weather whenever you leave home. ColorCast will change the color of one or more Hue or LifX lights to match the weather forecast whenever it senses motion",
 	category: "Convenience",
-	iconUrl: "https://s3.amazonaws.com/smartapp-icons/Developers/smart-light-timer.png",
-	iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Developers/smart-light-timer@2x.png",
-	iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Developers/smart-light-timer@2x.png"
+	iconUrl: "http://apps.shiftedpixel.com/weather/images/icons/colorcast.png",
+	iconX2Url: "http://apps.shiftedpixel.com/weather/images/icons/colorcast@2x.png",
+	iconX3Url: "http://apps.shiftedpixel.com/weather/images/icons/colorcast@2x.png"
 )
 
 preferences {
@@ -58,11 +60,11 @@ preferences {
 			url: "https://developer.forecast.io/",
 			description: "tap to view Forecast.io website in mobile browser")
 	
-			input "apiKey", "text", title: "Enter your new key", required:true
+			input "apiKey", "text", title: "Enter your new key", required:true, defaultValue:"8b533da63e8dc7e74a1aa20acaf8ac13"
 		}
 	}
 	
-	page(name: "pageSettings", title: "", install: true, uninstall: true) {
+	page(name: "pageSettings", title: "General Settings", nextPage: "pageTriggers", install: false, uninstall: true) {
 		section("Select Motion Detector") {
 			input "motion_detector", "capability.motionSensor", title: "Where?", required:false //Select motion sensor(s). Optional because app can be triggered manually
 		}
@@ -73,7 +75,7 @@ preferences {
 
 		section ("Forecast Range") {
 			// Get the number of hours to look ahead. Weather for the next x hours will be parsed to compare against user specified values.
-			input "lookAheadHours", "enum", title: "Get weather for the next...", options: [
+			input "forecastRange", "enum", title: "Get weather for the next...", options: [
 				"Current conditions", 
 				"1 Hour", 
 				"2 Hours", 
@@ -101,17 +103,76 @@ preferences {
 				"24 Hours"
 			], required: true, defaultValue:"Current conditions"
 		}
-
-		section ("Weather Triggers") {
-			input "tempMinTrigger", "number", title: "Low Temperature", required: false, defaultValue:35 //Set the minumum temperature to trigger the "Cold" color
-			input "tempMaxTrigger", "number", title: "High Temperature", required: false, defaultValue:80 //Set the maximum temperature to trigger the "Hot" color
-			input "windTrigger", "number", title: "High Wind Speed", required: false, defaultValue:24 //Set the maximum temperature to trigger the "Windy" color
-		}
-
+        
 		section([mobileOnly:true]) {
 			label title: "Assign a name", required: false //Allow custom name for app. Usefull if the app is installed multiple times for different modes
 			mode title: "Set for specific mode(s)", required: false //Allow app to be assigned to different modes. Usefull if user wants different setting for different modes
 		}
+
+	}
+    page(name: "pageTriggers", title: "Set Weather Triggers", install: true, uninstall: true) {
+    	def colors=["Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
+    	def colorsWithDisabled=["Disabled","Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
+		section ("All Clear") {
+			input "allClearColor", "enum", title: "Color", options: colors, required: true, defaultValue:"Green"            
+		}
+        section ("Low Temperature") {
+			input "tempMinTrigger", "number", title: "Low Temperature - °F", required: true, defaultValue:35 //Set the minumum temperature to trigger the "Cold" color
+ 			input "tempMinType", "enum", title: "Temperature Type", options: [
+            	"Actual",
+				"Feels like"
+			], required: true, defaultValue:"Actual" 
+            input "tempMinColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Blue"            
+		}
+		section ("High Temperature") {
+			input "tempMaxTrigger", "number", title: "High Temperature - °F", required: true, defaultValue:80 //Set the minumum temperature to trigger the "Cold" color
+            input "tempMaxType", "enum", title: "Temperature Type", options: [
+            	"Actual",
+				"Feels like"
+			], required: true, defaultValue:"Actual" 
+			input "tempMaxColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Red"            
+		}
+         
+        section ("Rain") {      
+			input "rainColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Purple",  multiple:true            
+		} 
+		section ("Snow") {      
+			input "snowColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Pink",  multiple:true            
+		}
+		section ("Sleet\r\n(applies to freezing rain, ice pellets, wintery mix, or hail)") {      
+			input "sleetColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Pink",  multiple:true            
+		}
+
+ 
+        section ("Cloudy") {
+			input "cloudPercentTrigger", "number", title: "Cloud Cover %", required: true, defaultValue:50 //Set the minumum temperature to trigger the "Cold" color
+			input "cloudPercentColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"White"            
+		}
+        section ("Dew Point\r\n(Sometimes refered to as humidity)") {
+			input "dewPointTrigger", "number", title: "Dew Point - °F", required: true, defaultValue:65 //Set the minumum temperature to trigger the "Cold" color
+			input "dewPointColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Orange"   
+            href(name: "hrefNotRequired",
+                title: "Learn more about \"Dew Point\"",
+                required: false,
+                style: "external",
+                url: "http://www.washingtonpost.com/blogs/capital-weather-gang/wp/2013/07/08/weather-weenies-prefer-dew-point-over-relative-humidity-and-you-should-too/",
+                description: "A Dew Point above 65° is generally considered \"muggy\"\r\nTap here to learn more about dew point"
+            )	         
+		}
+
+		section ("Wind") {
+			input "windTrigger", "number", title: "High Wind Speed", required: true, defaultValue:24 //Set the minumum temperature to trigger the "Cold" color           
+			input "windColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Yellow",  multiple:true            
+		}
+     
+ 
+        section ("Weather Alerts") {      
+			input "alertFlash", "enum", title: "Flash Lights For...", options: [
+				"warning":"Warnings", 
+				"watch":"Watches", 
+				"advisory":"Advisories"
+			], required: true, defaultValue:["Warnings","Watches","Advisories"],  multiple:true            
+		}  
 	}
 }
 
@@ -119,7 +180,6 @@ def installed() {
 	log.debug "Installed with settings: ${settings}"
 	initialize()
 }
-
 
 def initialize() {
 	log.info "Initializing, subscribing to motion event at ${motionHandler} on ${motion_detector}"
@@ -129,7 +189,6 @@ def initialize() {
 
 def updated() {
 	log.debug "Updated with settings: ${settings}"
-	
 	unsubscribe()
 	unschedule()
 	initialize()
@@ -137,84 +196,144 @@ def updated() {
 
 
 def checkForWeather() {
-	def defaultColor ="Green" //Set the "all clear" color
 
 	def colors = [] //Initialze colors array
 	
 	//Initialize weather events
 	def willRain=false;
 	def willSnow=false;
+	def willSleet=false;
 	def windy=false;
 	def tempLow
 	def tempHigh
+    def cloudy=false;
+    def humid=false;
 	def weatherAlert=false
 	
-	def forecastUrl="https://api.forecast.io/forecast/$apiKey/$location.latitude,$location.longitude" //Create api url
+	def forecastUrl="https://api.forecast.io/forecast/$apiKey/$location.latitude,$location.longitude?exclude=daily,flags,minutely" //Create api url. Exclude unneeded data 
+    
+    //Exclude additional unneded data from api url.
+    if (forecastRange=='Current conditions') {
+    	forecastUrl+=',hourly' //If we're checking current conditions we can exclude hourly data
+    } else {
+    	forecastUrl+=',currently' //If we're checking hourly conditions we can exclude current data
+    }
+    
+    if (alertFlash==null) {
+    	forecastUrl+=',alerts' //If alert event is disabled then we can also exclude alert data
+    }
 
 	httpGet(forecastUrl) {response -> 
 
 		if (response.data) { //API response was successfull
+
 			def i=0
-			if (lookAheadHours=="Current conditions") { //Get current weather conditions
-				def currentConditions=response.data.currently
-				if (currentConditions.precipProbability.floatValue()>=0.15) { //Consider it raining/snowing if precip probabilty is greater than 15%
-					if (currentConditions.precipType=='rain') {
-						willRain=true //Precipitation type is rain
-					} else {
-						willSnow=true //Precipitation type is NOT rain. This would include snow, sleet, hail, etc.
-					}
-				}
-				tempLow=tempHigh=currentConditions.temperature //High and low temps are the same for current conditions
-				if (currentConditions.windSpeed>=windTrigger) windy=true //Compare to user defined value for wid speed.
-			} else { //Get hourly data
-				for (hour in response.data.hourly.data){ //Iterate over hourly data
-					if (lookAheadHours.replaceAll(/\D/,"").toInteger()<++i) { //Break if we've processed all of the specified look ahead hours. Need to strip non-numeric characters(i.e. "hours") from string so we can cast to an integer
-						break
-					} else {
-						if (hour.precipProbability.floatValue()>=0.15) { //Consider it raining/snowing if precip probabilty is greater than 15%
-							if (hour.precipType=='rain') {
-								willRain=true //Precipitation type is rain
-							} else {
-								willSnow=true //Precipitation type is NOT rain. This would include snow, sleet, hail, etc.
-							}
-						}
-						if (tempLow==null || tempLow>hour.temperature) tempLow=hour.temperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
-						if (tempHigh==null || tempHigh<hour.temperature) tempHigh=hour.temperature //Compare the stored high temp to the current iteration temp. If it's higher overwrite the stored high with this temp
-						if (hour.windSpeed>=windTrigger) windy=true //Compare to user defined value for wid speed.
-					}
-				}
-			}
+            def lookAheadHours=1
+            def forecastData=[]
+			if (forecastRange=="Current conditions") { //Get current weather conditions
+            	forecastData.push(response.data.currently)
+            } else {
+            	forecastData=response.data.hourly.data
+                lookAheadHours=forecastRange.replaceAll(/\D/,"").toInteger()
+            }
 
-			if (response.data.alerts) weatherAlert=true //Is there currently a weather alert
+            for (hour in forecastData){ //Iterate over hourly data
+                if (lookAheadHours<++i) { //Break if we've processed all of the specified look ahead hours. Need to strip non-numeric characters(i.e. "hours") from string so we can cast to an integer
+                    log.debug i
+                    break
+                        } else {
 
+                    if (snowColor!='Disabled' || rainColor!='Disabled' || sleetColor!='Disabled') {
+                        if (hour.precipProbability.floatValue()>=0.15) { //Consider it raining/snowing if precip probabilty is greater than 15%
+                            if (hour.precipType=='rain') {
+                                willRain=true //Precipitation type is rain
+                            } else if (currentConditions.precipType=='snow') {
+                                willSnow=true
+                            } else {
+                                willSleet=true
+                            }
+                        }
+                    }
+
+                    if (tempMinColor!='Disabled') {
+                        if (tempMinType=='Actual') {
+                            if (tempLow==null || tempLow>hour.temperature) tempLow=hour.temperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
+                        } else {
+                            if (tempLow==null || tempLow>hour.apparentTemperature) tempLow=hour.apparentTemperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
+                        }
+                    }
+
+                    if (tempMaxColor!='Disabled') {
+                        if (tempMaxType=='Actual') {
+                            if (tempHigh==null || tempHigh>hour.temperature) tempHigh=hour.temperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
+                        } else {
+                            if (tempHigh==null || tempHigh>hour.apparentTemperature) tempHigh=hour.apparentTemperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
+                        }
+                    }
+
+                    if (windColor!='Disabled' && hour.windSpeed>=windTrigger) windy=true //Compare to user defined value for wid speed.
+                    if (cloudPercentColor!='Disabled' && hour.cloudCover*100>=cloudPercentTrigger) cloudy=true //Compare to user defined value for wind speed.
+                    if (dewPointColor!='Disabled' && hour.dewPoint>=dewPointTrigger) humid=true //Compare to user defined value for wind speed.
+                }
+            }
+                
+            
+			if (response.data.alerts) { //See if Alert data is included in response
+            	response.data.alerts.each { //If it is iterate through all Alerts
+                	def thisAlert=it;
+                    alertFlash.each{ //Iterate through all user specified alert types
+                        if (thisAlert.toLowerCase().indexOf(it)>=0) { //If this user specified alert type matches this alert response
+                        	log.debug "ALERT"
+                            weatherAlert=true //Is there currently a weather alert
+                        }
+                    }
+                }
+            }
+            
 			//Add color strings to the colors array to be processed later
-			if (tempLow<=tempMinTrigger.floatValue()) {
-				colors.push('Blue')
+			if (tempMinColor!='Disabled' && tempLow<=tempMinTrigger.floatValue()) {
+				colors.push(tempMinColor)
 				log.debug "Cold"
 			}
-			if (tempHigh>=tempMaxTrigger.floatValue()) {
-				colors.push('Red')
+			if (tempMaxColor!='Disabled' && tempHigh>=tempMaxTrigger.floatValue()) {
+				colors.push(tempMaxColor)
 				log.debug "Hot"
 			}
-			if (willSnow) {
-				colors.push('Pink')
+			if (snowColor!='Disabled' && willSnow) {
+				colors.push(snowColor)
 				log.debug "Snow"			
 			}
-			if (willRain) {
-				colors.push('Purple')
+			if (sleetColor!='Disabled' && willSleet) {
+				colors.push(sleetColor)
+				log.debug "Sleet"			
+			}
+			if (rainColor!='Disabled' && willRain) {
+				colors.push(rainColor)
 				log.debug "Rain"
 			}
-			if (windy) {
-				colors.push('Yellow')
+			if (windColor!='Disabled' && windy) {
+				colors.push(windColor)
 				log.debug "Windy"
+			}
+			if (cloudPercentColor!='Disabled' && cloudy) {
+				colors.push(cloudPercentColor)
+				log.debug "Cloudy"
+			}
+			if (humidityColor!='Disabled' && humid) {
+				colors.push(humidityColor)
+				log.debug "Humid"
 			}
 		} else { //API response was NOT successfull
 			log.debug "HttpGet Response data unsuccesful."
 		}
 	}
+    
+
 
 	//If the colors array is empty, assign the "all clear" color
-	if (colors.size()==0) colors.push(defaultColor)
+	if (colors.size()==0) colors.push(allClearColor)
+    
+    colors.unique()
 	
 	def delay=2000 //The amount of time to leave each color on
 	def iterations=1 //The number of times to show each color
@@ -318,4 +437,3 @@ def appTouchHandler(evt) {// If the button is pressed then trigger the weather d
 	checkForWeather()	
 	log.debug "App triggered with button press."
 }
-
