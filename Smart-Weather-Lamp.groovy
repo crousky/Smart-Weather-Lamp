@@ -4,7 +4,7 @@
  *	Inspired by and based in large part on the original Color Changing Smart Weather lamp by Jim Kohlenberger.
  *	See Jim's original SmartApp at http://community.smartthings.com/t/color-changing-smart-weather-lamp-app/12046 which includes an option for high pollen notifications
  *	
- *	This weather lantern app turns on with motion and turns a Phillips hue lamp different colors based on the weather.  
+ *	This weather lantern app turns on with motion and turns a Phillips hue (or LifX) lamp different colors based on the weather.  
  *	It uses dark sky's weather API to micro-target weather. 
  *
  *	Colors definitions
@@ -14,8 +14,6 @@
  *	Pink		Snow: Snow is forecast for specified time period.
  *	Red 		Hot:  It's going to be at or above the specified maximum temperature
  *	Yellow 		Wind: Wind is forecast to meet or exceed the specified maximum wind speed
- *	White 		Cloudy: Cloud cover is forecast to meet or exceed the specified maximum
- *	Orange 		Dew Point: Dew point is forcast to exceed maximum
  *	Green		All clear
  *	Blinking any color indicates that there is a weather advisory for your location
  *
@@ -114,7 +112,7 @@ preferences {
     	def colors=["Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
     	def colorsWithDisabled=["Disabled","Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
 		section ("All Clear") {
-			input "allClearColor", "enum", title: "Color", options: colors, required: true, defaultValue:"Green"            
+			input "allClearColor", "enum", title: "Color", options: colors, required: true, defaultValue:"Green",  multiple:false            
 		}
         section ("Low Temperature") {
 			input "tempMinTrigger", "number", title: "Low Temperature - °F", required: true, defaultValue:35 //Set the minumum temperature to trigger the "Cold" color
@@ -122,7 +120,7 @@ preferences {
             	"Actual",
 				"Feels like"
 			], required: true, defaultValue:"Actual" 
-            input "tempMinColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Blue"            
+            input "tempMinColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Blue",  multiple:false            
 		}
 		section ("High Temperature") {
 			input "tempMaxTrigger", "number", title: "High Temperature - °F", required: true, defaultValue:80 //Set the minumum temperature to trigger the "Cold" color
@@ -130,27 +128,27 @@ preferences {
             	"Actual",
 				"Feels like"
 			], required: true, defaultValue:"Actual" 
-			input "tempMaxColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Red"            
+			input "tempMaxColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Red",  multiple:false            
 		}
          
         section ("Rain") {      
-			input "rainColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Purple",  multiple:true            
+			input "rainColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Purple",  multiple:false            
 		} 
 		section ("Snow") {      
-			input "snowColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Pink",  multiple:true            
+			input "snowColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Pink",  multiple:false            
 		}
 		section ("Sleet\r\n(applies to freezing rain, ice pellets, wintery mix, or hail)") {      
-			input "sleetColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Pink",  multiple:true            
+			input "sleetColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Pink",  multiple:false            
 		}
 
  
         section ("Cloudy") {
 			input "cloudPercentTrigger", "number", title: "Cloud Cover %", required: true, defaultValue:50 //Set the minumum temperature to trigger the "Cold" color
-			input "cloudPercentColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"White"            
+			input "cloudPercentColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"White",  multiple:false            
 		}
         section ("Dew Point\r\n(Sometimes refered to as humidity)") {
 			input "dewPointTrigger", "number", title: "Dew Point - °F", required: true, defaultValue:65 //Set the minumum temperature to trigger the "Cold" color
-			input "dewPointColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Orange"   
+			input "dewPointColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Orange",  multiple:false   
             href(name: "hrefNotRequired",
                 title: "Learn more about \"Dew Point\"",
                 required: false,
@@ -162,7 +160,7 @@ preferences {
 
 		section ("Wind") {
 			input "windTrigger", "number", title: "High Wind Speed", required: true, defaultValue:24 //Set the minumum temperature to trigger the "Cold" color           
-			input "windColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Yellow",  multiple:true            
+			input "windColor", "enum", title: "Color", options: colorsWithDisabled, required: true, defaultValue:"Yellow",  multiple:false            
 		}
      
  
@@ -196,6 +194,8 @@ def updated() {
 
 
 def checkForWeather() {
+
+
 
 	def colors = [] //Initialze colors array
 	
@@ -239,7 +239,6 @@ def checkForWeather() {
 
             for (hour in forecastData){ //Iterate over hourly data
                 if (lookAheadHours<++i) { //Break if we've processed all of the specified look ahead hours. Need to strip non-numeric characters(i.e. "hours") from string so we can cast to an integer
-                    log.debug i
                     break
                         } else {
 
@@ -270,7 +269,7 @@ def checkForWeather() {
                             if (tempHigh==null || tempHigh>hour.apparentTemperature) tempHigh=hour.apparentTemperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
                         }
                     }
-
+                    
                     if (windColor!='Disabled' && hour.windSpeed>=windTrigger) windy=true //Compare to user defined value for wid speed.
                     if (cloudPercentColor!='Disabled' && hour.cloudCover*100>=cloudPercentTrigger) cloudy=true //Compare to user defined value for wind speed.
                     if (dewPointColor!='Disabled' && hour.dewPoint>=dewPointTrigger) humid=true //Compare to user defined value for wind speed.
@@ -328,13 +327,12 @@ def checkForWeather() {
 		}
 	}
     
-
-
 	//If the colors array is empty, assign the "all clear" color
 	if (colors.size()==0) colors.push(allClearColor)
     
     colors.unique()
-	
+    log.debug colors
+ 	
 	def delay=2000 //The amount of time to leave each color on
 	def iterations=1 //The number of times to show each color
 	if (weatherAlert) {
