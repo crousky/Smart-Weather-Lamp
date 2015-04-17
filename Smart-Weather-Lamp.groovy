@@ -9,12 +9,7 @@
  *
  *	Colors definitions
  *
- *	Purple 		Rain: Rain is forecast for specified time period.
- *	Blue 		Cold: It's going to be at or below the specified minimum temperature
- *	Pink		Snow: Snow is forecast for specified time period.
- *	Red 		Hot:  It's going to be at or above the specified maximum temperature
- *	Yellow 		Wind: Wind is forecast to meet or exceed the specified maximum wind speed
- *	Green		All clear
+ *	Choose any included color to alert you of COld Temperatures, Hot Temperatures, High Wind, Dew Point (Humidity), Rain, Snow, Sleet or Heavy Cloud Cover
  *	Blinking any color indicates that there is a weather advisory for your location
  *
  *  With special thanks to insights from the SmartThings Hue mood lighting script and the light on motion script by kennyyork@centralite.com
@@ -58,7 +53,7 @@ preferences {
 			url: "https://developer.forecast.io/",
 			description: "tap to view Forecast.io website in mobile browser")
 	
-			input "apiKey", "text", title: "Enter your new key", required:true
+			input "apiKey", "text", title: "Enter your new key", required:true, defaultValue:"5c6131aeac9d9ef9dc579edf0cebf4c6"
 		}
 	}
 	
@@ -222,6 +217,8 @@ def checkForWeather() {
     if (alertFlash==null) {
     	forecastUrl+=',alerts' //If alert event is disabled then we can also exclude alert data
     }
+    
+    log.debug forecastUrl
 
 	httpGet(forecastUrl) {response -> 
 
@@ -279,13 +276,15 @@ def checkForWeather() {
             
 			if (response.data.alerts) { //See if Alert data is included in response
             	response.data.alerts.each { //If it is iterate through all Alerts
-                	def thisAlert=it;
+                	def thisAlert=it.title;
+                    log.debug thisAlert
                     alertFlash.each{ //Iterate through all user specified alert types
                         if (thisAlert.toLowerCase().indexOf(it)>=0) { //If this user specified alert type matches this alert response
-                        	log.debug "ALERT"
+                        	log.debug "ALERT: "+it
                             weatherAlert=true //Is there currently a weather alert
                         }
                     }
+                    
                 }
             }
             
