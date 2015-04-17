@@ -53,7 +53,7 @@ preferences {
 			url: "https://developer.forecast.io/",
 			description: "tap to view Forecast.io website in mobile browser")
 	
-			input "apiKey", "text", title: "Enter your new key", required:true, defaultValue:"5c6131aeac9d9ef9dc579edf0cebf4c6"
+			input "apiKey", "text", title: "Enter your new key", required:true
 		}
 	}
 	
