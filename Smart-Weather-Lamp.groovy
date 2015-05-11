@@ -292,34 +292,42 @@ def checkForWeather() {
 			if (tempMinColor!='Disabled' && tempLow<=tempMinTrigger.floatValue()) {
 				colors.push(tempMinColor)
 				log.debug "Cold"
+				log.debug tempMinColor
 			}
 			if (tempMaxColor!='Disabled' && tempHigh>=tempMaxTrigger.floatValue()) {
 				colors.push(tempMaxColor)
 				log.debug "Hot"
+				log.debug tempMaxColor
 			}
 			if (snowColor!='Disabled' && willSnow) {
 				colors.push(snowColor)
-				log.debug "Snow"			
+				log.debug "Snow"
+				log.debug snowColor			
 			}
 			if (sleetColor!='Disabled' && willSleet) {
 				colors.push(sleetColor)
-				log.debug "Sleet"			
+				log.debug "Sleet"
+				log.debug sleetColor			
 			}
 			if (rainColor!='Disabled' && willRain) {
 				colors.push(rainColor)
 				log.debug "Rain"
+				log.debug rainColor
 			}
 			if (windColor!='Disabled' && windy) {
 				colors.push(windColor)
 				log.debug "Windy"
+				log.debug windColor
 			}
 			if (cloudPercentColor!='Disabled' && cloudy) {
 				colors.push(cloudPercentColor)
 				log.debug "Cloudy"
+				log.debug cloudPercentColor
 			}
 			if (humidityColor!='Disabled' && humid) {
-				colors.push(humidityColor)
+				colors.push(dewPointColor)
 				log.debug "Humid"
+				log.debug dewPointColor
 			}
 		} else { //API response was NOT successfull
 			log.debug "HttpGet Response data unsuccesful."
