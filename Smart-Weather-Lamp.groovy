@@ -261,9 +261,9 @@ def checkForWeather() {
 
                     if (tempMaxColor!='Disabled') {
                         if (tempMaxType=='Actual') {
-                            if (tempHigh==null || tempHigh>hour.temperature) tempHigh=hour.temperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
+                            if (tempHigh==null || tempHigh<hour.temperature) tempHigh=hour.temperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
                         } else {
-                            if (tempHigh==null || tempHigh>hour.apparentTemperature) tempHigh=hour.apparentTemperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
+                            if (tempHigh==null || tempHigh<hour.apparentTemperature) tempHigh=hour.apparentTemperature //Compare the stored low temp to the current iteration temp. If it's lower overwrite the stored low with this temp
                         }
                     }
                     
