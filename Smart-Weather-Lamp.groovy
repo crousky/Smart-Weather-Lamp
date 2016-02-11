@@ -284,7 +284,7 @@ def checkForWeather() {
 					if (hour.precipProbability.floatValue()>=0.15) { //Consider it raining/snowing if precip probabilty is greater than 15%
 						if (hour.precipType=='rain') {
 							willRain=true //Precipitation type is rain
-						} else if (currentConditions.precipType=='snow') {
+						} else if (hour.precipType=='snow') {
 							willSnow=true
 						} else {
 							willSleet=true
