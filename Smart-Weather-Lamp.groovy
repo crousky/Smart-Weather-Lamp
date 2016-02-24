@@ -59,19 +59,19 @@ def	 pageMain() {
 			)
 		}
 		
-		if (!isValidApiKey()) {
-			section (
-				title:		"API Setup"
-			) {			
-				href(
-					title: 			"Forecast.io API Key",
-					name: 			"hrefApi", 
-					page: 			"pageAPI",
-					description:	getKey(),
-					required: 		true,
-					state:			isValidApiKey() ? "complete" : ""
-				)
-			}
+		section (
+			title:		"API Setup",
+			hideable:	isValidApiKey() ? true : false,
+			hidden:		isValidApiKey() ? true : false
+		) {			
+			href(
+				title: 			"Forecast.io API Key",
+				name: 			"hrefApi", 
+				page: 			"pageAPI",
+				description:	getKey(),
+				required: 		!isValidApiKey(),
+				state:			isValidApiKey() ? "complete" : ""
+			)
 		}
 		
 		section("When to display") {
@@ -80,7 +80,7 @@ def	 pageMain() {
 				name: 			"toPageDisplayTriggers", 
 				page: 			"pageDisplayTriggers",
 				description:	getDisplayTriggers(),
-				required:		true,
+				required:		!isValidDisplayTriggers(),
 				state:			isValidDisplayTriggers() ? "complete" : ""
 			)
 		}
@@ -91,7 +91,7 @@ def	 pageMain() {
 				name: 			"toPageWeatherTriggers", 
 				page: 			"pageWeatherTriggers",
 				description:	getWeatherTriggers(),
-				required:		true,
+				required:		!isValidWeatherTriggers(),
 				state:			isValidWeatherTriggers() ? "complete" : ""
 			)
 		}
@@ -102,7 +102,7 @@ def	 pageMain() {
 				name: 			"toPageLightSettings", 
 				page: 			"pageLightSettings",
 				description:	getLightSettings(),
-				required:		true,
+				required:		!isValidLights(),
 				state:			isValidLights() ? "complete" : ""
 			)
 		}
@@ -617,18 +617,6 @@ def	 pageUnderTheHood() {
 		install: false, 
 		uninstall: false
 	) {
-		section (
-			title:		"API Setup"
-		) {			
-			href(
-				title: 			"Forecast.io API Key",
-				name: 			"hrefApi", 
-				page: 			"pageAPI",
-				description:	getKey(),
-				required: 		true,
-				state:			isValidApiKey() ? "complete" : ""
-			)
-		}	
 		section("Color Display Duration") {
 			paragraph "Seconds to display each color. If total display time exceeds 20 seconds, display time will be automatically reduced. It's advisable to keep this number low, especially if you'll be using multiple lights. Multiple lights can cause additional delays that could cause the execution limit to be exceeded resulting in errors."
 			input (
