@@ -4,7 +4,7 @@
  *	Inspired by and based in large part on the original Color Changing Smart Weather lamp by Jim Kohlenberger.
  *	See Jim's original SmartApp at http://community.smartthings.com/t/color-changing-smart-weather-lamp-app/12046 which includes an option for high pollen notifications
  *	
- *	This weather lantern app turns a Phillips hue (or LifX) lamp different colors based on the weather.	 
+ *	This weather lantern app turns a Phillips hue or LifX lamp different colors based on the weather.	 
  *	It uses dark sky's weather API to micro-target weather. 
  *
  *	With special thanks to insights from the SmartThings Hue mood lighting script and the light on motion script by kennyyork@centralite.com
@@ -39,6 +39,7 @@ preferences {
 	page(name: "pageWeatherTriggers")
 	page(name: "pageLightSettings")
 	page(name: "pageUnderTheHood")
+	page(name: "pageColorDefinitions")
 }
 
 def	 pageMain() {
@@ -48,6 +49,17 @@ def	 pageMain() {
 		install: true, 
 		uninstall: true
 	) {
+	
+		state.hslWhite 	= [0, 0]
+		state.hslBlue 	= [72, 100]
+		state.hslGreen 	= [39, 100]
+		state.hslYellow = [25, 90]
+		state.hslOrange = [19, 100]
+		state.hslPurple = [84, 100]
+		state.hslPink 	= [100, 55]
+		state.hslRed 	= [0, 100]
+		state.colorList	= ["Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
+		
 
 		section("App Status") {
 			input (
@@ -87,7 +99,7 @@ def	 pageMain() {
 		
 		section("What to display") {
 			href(
-				title: 			"Display forecast for...",
+				title: 			getForecastTitle(),
 				name: 			"toPageWeatherTriggers", 
 				page: 			"pageWeatherTriggers",
 				description:	getWeatherTriggers(),
@@ -98,7 +110,7 @@ def	 pageMain() {
 		
 		section("Where to display") {
 			href(
-				title: 			"Use these lights...",
+				title: 			getLightSettingsTitle(),
 				name: 			"toPageLightSettings", 
 				page: 			"pageLightSettings",
 				description:	getLightSettings(),
@@ -132,7 +144,7 @@ def	 pageMain() {
 
 	}
 }
-def	 pageAPI() {
+def	pageAPI() {
 	dynamicPage(
 		name: "pageAPI", 
 		title: "API Key", 
@@ -164,7 +176,7 @@ def	 pageAPI() {
 		}
 	}
 }
-def	 pageDisplayTriggers() {
+def	pageDisplayTriggers() {
 	dynamicPage(
 		name: "pageDisplayTriggers",
 		install: false, 
@@ -210,15 +222,13 @@ def	 pageDisplayTriggers() {
 
 	}
 }
-def	 pageWeatherTriggers() {
+def	pageWeatherTriggers() {
 	dynamicPage(
 		name: "pageWeatherTriggers", 
 		title: "Set Weather Triggers", 
 		install: false, 
 		uninstall: false
 	) {
-	
-		def colors=["Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
 
 		section ("Forecast Range") {
 			// Get the number of hours to look ahead. Weather for the next x hours will be parsed to compare against user specified values.
@@ -275,7 +285,7 @@ def	 pageWeatherTriggers() {
 				name:			"allClearColor", 
 				type:			"enum", 
 				title: 			"Color",
-				options:		colors,
+				options:		state.colorList,
 				defaultValue:	"Green",
 				required:		false,
 				multiple:		false
@@ -317,7 +327,7 @@ def	 pageWeatherTriggers() {
 				name:			"tempMinColor", 
 				type:			"enum", 
 				title: 			"Color",
-				options:		colors,
+				options:		state.colorList,
 				defaultValue:	"Blue",
 				required:		true,
 				multiple:		false
@@ -359,7 +369,7 @@ def	 pageWeatherTriggers() {
 				name:			"tempMaxColor", 
 				type:			"enum", 
 				title: 			"Color",
-				options:		colors,
+				options:		state.colorList,
 				defaultValue:	"Red",
 				required:		true,
 				multiple:		false
@@ -395,7 +405,7 @@ def	 pageWeatherTriggers() {
 				name:			"rainColor", 
 				type:			"enum", 
 				title: 			"Color",
-				options:		colors,
+				options:		state.colorList,
 				defaultValue:	"Purple",
 				required:		true,
 				multiple:		false
@@ -428,7 +438,7 @@ def	 pageWeatherTriggers() {
 				name:			"snowColor", 
 				type:			"enum", 
 				title: 			"Color",
-				options:		colors,
+				options:		state.colorList,
 				defaultValue:	"Pink",
 				required:		true,
 				multiple:		false
@@ -451,7 +461,7 @@ def	 pageWeatherTriggers() {
 				name:			"sleetColor", 
 				type:			"enum", 
 				title: 			"Color",
-				options:		colors,
+				options:		state.colorList,
 				defaultValue:	"Pink",
 				required:		true,
 				multiple:		false
@@ -482,7 +492,7 @@ def	 pageWeatherTriggers() {
 				name:			"cloudPercentColor", 
 				type:			"enum", 
 				title: 			"Color",
-				options:		colors,
+				options:		state.colorList,
 				defaultValue:	"White",
 				required:		true,
 				multiple:		false
@@ -513,7 +523,7 @@ def	 pageWeatherTriggers() {
 				name:			"dewPointColor", 
 				type:			"enum", 
 				title: 			"Color",
-				options:		colors,
+				options:		state.colorList,
 				defaultValue:	"Orange",
 				required:		true,
 				multiple:		false
@@ -552,7 +562,7 @@ def	 pageWeatherTriggers() {
 				name:			"windColor", 
 				type:			"enum", 
 				title: 			"Color",
-				options:		colors,
+				options:		state.colorList,
 				defaultValue:	"Yellow",
 				required:		true,
 				multiple:		false
@@ -575,7 +585,7 @@ def	 pageWeatherTriggers() {
 		}	 
 	}
 }
-def	 pageLightSettings() {
+def	pageLightSettings() {
 	dynamicPage(
 		name: "pageLightSettings", 
 		title: "Set up lights", 
@@ -610,13 +620,46 @@ def	 pageLightSettings() {
 	
 	}
 }
-def	 pageUnderTheHood() {
+def	pageUnderTheHood() {
 	dynamicPage(
 		name: "pageUnderTheHood", 
 		title: "Advanced options", 
 		install: false, 
 		uninstall: false
-	) {
+	) {		
+		section("Color Definitions") {
+			paragraph "Set hue and saturation for each color. Different lights display colors differently so use this section to fine tune the color definitions if your colors don't look right."
+			
+			for (i in state.colorList) {
+			debug(i)
+				href(
+					title: 			i,
+					name: 			"topageColorDefinitions"+i, 
+					page: 			"pageColorDefinitions",
+					description:	getColorDefinitionsLabel(i),
+					params: 		[color: i]
+				)
+			}
+		}
+		section("Color Preview") {
+			paragraph "Cycle through colors on app button press. This is helpful when altering the color values in the code to get the best possible output for your light. All other triggers will be disabled while this is active so be sure to disable it when you're done. Due to app execution time limits, testing all colors at once may cause the app to timeout before all selected lights have been displayed."
+			input (
+				name:			"colorCycleEnabled", 
+				type:			"bool", 
+				title: 			"Color Cycle",
+				required:		false,
+				defaultValue:	false
+			)	
+			
+			input (
+				name:			"colorCycleColors", 
+				type:			"enum", 
+				title: 			"Colors to cycle",
+				options:		state.colorList,
+				required:		false,
+				multiple:		true
+			)	
+		}
 		section("Color Display Duration") {
 			paragraph "Seconds to display each color. If total display time exceeds 20 seconds, display time will be automatically reduced. It's advisable to keep this number low, especially if you'll be using multiple lights. Multiple lights can cause additional delays that could cause the execution limit to be exceeded resulting in errors."
 			input (
@@ -638,27 +681,88 @@ def	 pageUnderTheHood() {
 				defaultValue:	false
 			)		
 		}
-		section("Color Preview") {
-			paragraph "Cycle through colors on app button press. This is helpful when altering the color values in the code to get the best possible output for your light. All other triggers will be disabled while this is active so be sure to disable it when you're done. Due to app execution time limits, testing all colors at once may cause the app to timeout before all selected lights have been displayed."
+
+	}
+}
+
+def	pageColorDefinitions(params) {
+	dynamicPage(
+		name: "pageColorDefinitions", 
+		title: params.color + " Color Definition", 
+		install: false, 
+		uninstall: false,
+		required: true
+	) {
+	
+		def defaultValues = getColorDefinitions(params.color);
+
+		section ("Hue - default " + state["hsl"+params.color][0]) {
+			paragraph  "Hue is a numeric representation of the position of a color on the chart below starting at red with a value of 0 and ending back at red with a value of 100."
+			
+			href (
+				name: 			"hrefNotRequired",
+				title: 			"View labeled hue chart",
+				required: 		false,
+				style: 			"embedded",
+				url: 			"http://apps.shiftedpixel.com/weather/images/hueChart.png",
+				image: 			"http://apps.shiftedpixel.com/weather/images/hueChartThumbnail.png"
+			)
+			
+			image (
+				name: 'hueChart', 
+				multiple: false, 
+				images: ["http://apps.shiftedpixel.com/weather/images/hueChart.png"]
+			)
 			input (
-				name:			"colorCycleEnabled", 
-				type:			"bool", 
-				title: 			"Color Cycle",
-				required:		false,
-				defaultValue:	false
-			)	
-			def colors=["Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
+				name:			"color_hue[${params.color}]",
+				type:			"number", 
+				title: 			"Hue (0-100)?",
+				required: 		true,
+				range:			"0..100",
+				defaultValue:	defaultValues[0]
+			)
+		}
+		
+		section ("Saturation - default " + state["hsl"+params.color][1]) {
+			paragraph "Saturation is the intensity of a color from 0% to 100%. At 0%, hue is meaningless as all hues would be completely desaturated and become white. 100% would be the deepest color saturation for the selected hue."
 			input (
-				name:			"colorCycleColors", 
-				type:			"enum", 
-				title: 			"Colors to cycle",
-				options:		colors,
-				required:		false,
-				multiple:		true
-			)	
+				name:			"color_saturation[${params.color}]",
+				type:			"number", 
+				title: 			"Saturation (0-100)?",
+				required: 		true,
+				range:			"0..100",
+				defaultValue:	defaultValues[1]
+			)
+		}
+		
+		section ("Brightness") {
+			paragraph "Brightness is a global setting that can be changed on the \"Light selection\" page."
 		}
 	}
 }
+
+def getColorDefinitions(colorName) {
+	def hsl = []
+	
+	
+	if (settings."color_hue[${colorName}]" instanceof Integer) {
+		hsl.push(settings."color_hue[${colorName}]")
+		hsl.push(settings."color_saturation[${colorName}]")
+	} else {
+		hsl.push(state["hsl"+colorName][0])
+		hsl.push(state["hsl"+colorName][1])
+	}
+
+	return hsl
+}
+
+def getColorDefinitionsLabel(colorName) {
+	
+	def hsl = getColorDefinitions(colorName)
+	
+	return "Hue: " + hsl[0] + "\nSaturation: " + hsl[1]
+}
+	
 
 def getKey() {
 	if (apiKey instanceof String) {
@@ -697,91 +801,99 @@ def getDisplayTriggers() {
 	return output
 }
 def getWeatherTriggers() {
-	def output = ""
+	def outputList = []
 	if (isValidWeatherTriggers()) {
 	
+		/*
 		if (forecastRange != "Current conditions") {
-			output = "The next " + forecastRange
+			outputList = "The next " + forecastRange
 		} else {
-			output = "The current weather conditions"
+			outputList = "The current weather conditions"
 		}
 		
-		output += "\n"
+		outputList += "\n"
+		*/
 		
 		if (allClearEnabled) {
-			output += "\n" + allClearColor + "\t- all clear"
+			outputList.add(allClearColor + "\t- all clear")
 		}
 		
 		if (lowTempEnabled) {
-			output += "\n" + tempMinColor + "\t- temperature " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + tempMinTrigger + "° or below"
+			outputList.add(tempMinColor + "\t- temperature " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + tempMinTrigger + "° or below")
 		}
 		
 		if (highTempEnabled) {
-			output += "\n" + tempMaxColor + "\t- temperature " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + tempMaxTrigger + "° or above"
+			outputList.add(tempMaxColor + "\t- temperature " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + tempMaxTrigger + "° or above")
 		}
 		
 		if (rainEnabled) {
 			if (forecastRange == "Current conditions") {
-				output += "\n" + rainColor + "\t- it's raining"
+				outputList.add(rainColor + "\t- it's raining")
 			} else {
-				output += "\n" + rainColor + "\t- " + ((rainAmount == "Any Amount") ? "any amount of rain" : rainAmount) + " is expected"
+				outputList.add(rainColor + "\t- " + ((rainAmount == "Any Amount") ? "any amount of rain" : rainAmount) + " is expected")
 			}
 		}
 		if (snowEnabled) {
 			if (forecastRange == "Current conditions") {
-				output += "\n" + snowColor + "\t- it's snowing"
+				outputList.add(snowColor + "\t- it's snowing")
 			} else if (snowTrigger == "Any Amount") {
-				output += "\n" + snowColor + "\t- " + snowTrigger + " of snow is expected"
+				outputList.add(snowColor + "\t- " + snowTrigger + " of snow is expected")
 			} else {
-				output += "\n" + snowColor + "\t- " + snowTrigger + "\" or more of snow is expected"
+				outputList.add(snowColor + "\t- " + snowTrigger + "\" or more of snow is expected")
 			}
 		}
 		
 		if (sleetEnabled) {
 			if (forecastRange == "Current conditions") {
-				output += "\n" + sleetColor + "\t- it's sleeting, hailing, etc."
+				outputList.add(sleetColor + "\t- it's sleeting, hailing, etc.")
 			} else {
-				output += "\n" + sleetColor + "\t- sleet, hail, etc is expected"
+				outputList.add(sleetColor + "\t- sleet, hail, etc is expected")
 			}
 		}
 		
 		if (cloudyEnabled) {
-			output += "\n" + cloudPercentColor + "\t- cloud cover " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + cloudPercentTrigger + "% or above"
+			outputList.add(cloudPercentColor + "\t- cloud cover " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + cloudPercentTrigger + "% or above")
 		}
 		
 		if (dewPointEnabled) {
-			output += "\n" + dewPointColor + "\t- dew point " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + dewPointTrigger + "° or above"
+			outputList.add(dewPointColor + "\t- dew point " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + dewPointTrigger + "°+")
 		}
 		
 		if (windEnabled) {
-			output += "\n" + windColor + "\t- wind " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + windTrigger + "mph or greater"
+			outputList.add(windColor + "\t- wind " + ((forecastRange == "Current conditions") ? "is" : "will be") + " " + windTrigger + "mph or greater")
 		}
 		
 		if (alwaysOn == false && (alertFlash instanceof Object) && alertFlash.size() > 0) {
-			def alertOutput = ""
-			def i = 1
+			def alertoutputList = ""
 			alertFlash.each{ //Iterate through all user specified alert types
 				
 				switch (it) {
 					case "warning":
-						alertOutput += "\n	 Warnings"
+						alertoutputList += "\n	 Warnings"
 						break
 				   	case "watch":
-						alertOutput += "\n	 Watches"
+						alertoutputList += "\n	 Watches"
 							break
 				   	case "advisory":
-						alertOutput += "\n	 Advisories"
+						alertoutputList += "\n	 Advisories"
 							break
 				}
 				
-				i++
 			}
 			
-			if (alertOutput != "") output += "\n\nFlash lights for" + alertOutput
+			if (alertoutputList != "") outputList.add("\nFlash lights for" + alertoutputList)
 			
 		}
 	} else {
-		output = "Choose weather conditions to display"
+		outputList.add("Choose weather conditions to display")
+	}
+	
+	def output = ""
+	
+	def i = 0;
+	outputList.each {
+		if (i++ > 0) output += "\n"
+		output += it
 	}
 	
 	return output
@@ -800,6 +912,34 @@ def getLightSettings() {
 	}
 	return output
 }
+
+def getLightSettingsTitle() {
+	def output = ""
+	if (hues instanceof Object) {
+ 		output = "Use these lights at " + settings.brightnessLevel + "% brightness"
+	} else {
+ 		output = "Use these lights..."
+	}
+	
+	return output
+ 
+}
+def getForecastTitle() {
+	def output = ""
+	if (isValidWeatherTriggers()) {
+		if (forecastRange != "Current conditions") {
+			output = "Display forecast for the next " + forecastRange
+		} else {
+			output = "Display the current weather conditions"
+		}
+	} else {
+ 		output = "Display forecast for..."
+	}
+	
+	return output
+ 
+}
+
 
 def isValidApiKey() {
 	if (apiKey instanceof String) {
@@ -1175,8 +1315,14 @@ def sendcolor(color) {
 	} else if (brightnessLevel>100) {
 		brightnessLevel=100
 	}
+	
+	def hsl = getColorDefinitions(color)
+	
+	hueColor = hsl[0]
+	saturation = hsl[1]
 
 	//Set the hue and saturation for the specified color.
+	/*
 	switch(color) {
 		case "White":
 			hueColor = 0
@@ -1219,6 +1365,7 @@ def sendcolor(color) {
 			hueColor = 0
 			break;
 	}
+	*/
 	
 	debug ("Setting color to " + color, true)
 
