@@ -4,7 +4,7 @@
  *	Inspired by and based in large part on the original Color Changing Smart Weather lamp by Jim Kohlenberger.
  *	See Jim's original SmartApp at http://community.smartthings.com/t/color-changing-smart-weather-lamp-app/12046 which includes an option for high pollen notifications
  *	
- *	This weather lantern app turns a Phillips hue or LifX lamp different colors based on the weather.	 
+ *	This weather lantern app turns a Phillips hue (or LifX) lamp different colors based on the weather.	 
  *	It uses dark sky's weather API to micro-target weather. 
  *
  *	With special thanks to insights from the SmartThings Hue mood lighting script and the light on motion script by kennyyork@centralite.com
@@ -58,7 +58,7 @@ def	 pageMain() {
 		state.hslPurple = [84, 100]
 		state.hslPink 	= [100, 55]
 		state.hslRed 	= [0, 100]
-		state.colorList	= ["Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
+        state.colorList	= ["Blue","Purple","Red","Pink","Orange","Yellow","Green","White"]
 		
 
 		section("App Status") {
@@ -69,6 +69,14 @@ def	 pageMain() {
 				required:		false,
 				defaultValue:	true
 			)
+            
+            input (
+            	name:			"hub", 
+                type:			"hub", 
+                multiple: 		false, 
+                required: 		true,
+                defaultValue:	0
+            )
 		}
 		
 		section (
@@ -141,6 +149,17 @@ def	 pageMain() {
 			)
 		}
 		
+	
+		section("Weather provider") {
+			href (
+				name: 			"hrefNotRequired",
+				title: 			"Powered by Dark Sky",
+				required: 		false,
+				description:	"",
+				style: 			"external",
+				url: 			"https://darksky.net/poweredby"
+			)
+		}
 
 	}
 }
@@ -171,7 +190,8 @@ def	pageAPI() {
 				name:			"apiKey", 
 				type:			"text", 
 				title: 			"Enter your new key",
-				required: 		true
+				required: 		true,
+				defaultValue:	"f3aa1fa7d99053ff0c09a7eb2e9fc1c5"
 			)
 		}
 	}
@@ -627,11 +647,11 @@ def	pageUnderTheHood() {
 		install: false, 
 		uninstall: false
 	) {		
-		section("Color Definitions") {
+    	section("Color Definitions") {
 			paragraph "Set hue and saturation for each color. Different lights display colors differently so use this section to fine tune the color definitions if your colors don't look right."
 			
 			for (i in state.colorList) {
-			debug(i)
+            debug(i)
 				href(
 					title: 			i,
 					name: 			"topageColorDefinitions"+i, 
@@ -650,7 +670,7 @@ def	pageUnderTheHood() {
 				required:		false,
 				defaultValue:	false
 			)	
-			
+            
 			input (
 				name:			"colorCycleColors", 
 				type:			"enum", 
@@ -691,7 +711,7 @@ def	pageColorDefinitions(params) {
 		title: params.color + " Color Definition", 
 		install: false, 
 		uninstall: false,
-		required: true
+        required: true
 	) {
 	
 		def defaultValues = getColorDefinitions(params.color);
@@ -702,17 +722,19 @@ def	pageColorDefinitions(params) {
 			href (
 				name: 			"hrefNotRequired",
 				title: 			"View labeled hue chart",
-				required: 		false,
+				//title:			null,
+                required: 		false,
 				style: 			"embedded",
 				url: 			"http://apps.shiftedpixel.com/weather/images/hueChart.png",
-				image: 			"http://apps.shiftedpixel.com/weather/images/hueChartThumbnail.png"
+                image: 			"http://apps.shiftedpixel.com/weather/images/hueChartThumbnail.png"
+                //description:	"View labeled hue chart"
 			)
-			
-			image (
-				name: 'hueChart', 
-				multiple: false, 
-				images: ["http://apps.shiftedpixel.com/weather/images/hueChart.png"]
-			)
+            
+            image (
+            	name: 'hueChart', 
+                multiple: false, 
+                images: ["http://apps.shiftedpixel.com/weather/images/hueChart.png"]
+            )
 			input (
 				name:			"color_hue[${params.color}]",
 				type:			"number", 
@@ -745,9 +767,14 @@ def getColorDefinitions(colorName) {
 	def hsl = []
 	
 	
-	if (settings."color_hue[${colorName}]" instanceof Integer) {
+    if (settings."color_hue[${colorName}]" instanceof Integer) {
 		hsl.push(settings."color_hue[${colorName}]")
 		hsl.push(settings."color_saturation[${colorName}]")
+    /*
+	if (color_hue instanceof Map && color_hue[colorName] instanceof Integer) {
+		hsl.push(color_hue[colorName])
+		hsl.push(color_saturation[colorName])
+    */
 	} else {
 		hsl.push(state["hsl"+colorName][0])
 		hsl.push(state["hsl"+colorName][1])
@@ -804,7 +831,7 @@ def getWeatherTriggers() {
 	def outputList = []
 	if (isValidWeatherTriggers()) {
 	
-		/*
+    	/*
 		if (forecastRange != "Current conditions") {
 			outputList = "The next " + forecastRange
 		} else {
@@ -812,7 +839,7 @@ def getWeatherTriggers() {
 		}
 		
 		outputList += "\n"
-		*/
+        */
 		
 		if (allClearEnabled) {
 			outputList.add(allClearColor + "\t- all clear")
@@ -887,14 +914,14 @@ def getWeatherTriggers() {
 	} else {
 		outputList.add("Choose weather conditions to display")
 	}
-	
-	def output = ""
-	
-	def i = 0;
-	outputList.each {
-		if (i++ > 0) output += "\n"
-		output += it
-	}
+    
+    def output = ""
+    
+    def i = 0;
+    outputList.each {
+        if (i++ > 0) output += "\n"
+        output += it
+    }
 	
 	return output
 	
@@ -976,6 +1003,8 @@ def installed() {
 }
 
 def initialize() {
+//debug (hub.longitude, true)
+log.debug "Hubs: ${location.hubs*.id}"
 
 	if (enabled) {
 
@@ -1044,7 +1073,7 @@ def alwaysOnDisplay() {
 
 // Weather Processing
 def getWeather(firstRun) {
-	def forecastUrl="https://api.forecast.io/forecast/$apiKey/$location.latitude,$location.longitude?exclude=daily,flags,minutely" //Create api url. Exclude unneeded data 
+	def forecastUrl="https://api.darksky.net/forecast/$apiKey/$location.latitude,$location.longitude?exclude=daily,flags,minutely" //Create api url. Exclude unneeded data 
 
 	//Exclude additional unneeded data from api url.
 	if (forecastRange=='Current conditions') {
