@@ -70,13 +70,6 @@ def	 pageMain() {
 				defaultValue:	true
 			)
             
-            input (
-            	name:			"hub", 
-                type:			"hub", 
-                multiple: 		false, 
-                required: 		true,
-                defaultValue:	0
-            )
 		}
 		
 		section (
@@ -1003,8 +996,6 @@ def installed() {
 }
 
 def initialize() {
-//debug (hub.longitude, true)
-log.debug "Hubs: ${location.hubs*.id}"
 
 	if (enabled) {
 
