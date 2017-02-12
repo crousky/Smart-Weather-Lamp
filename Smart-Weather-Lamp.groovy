@@ -191,7 +191,7 @@ def	pageAPI() {
 				type:			"text", 
 				title: 			"Enter your new key",
 				required: 		true,
-				defaultValue:	"f3aa1fa7d99053ff0c09a7eb2e9fc1c5"
+				defaultValue:	""
 			)
 		}
 	}
