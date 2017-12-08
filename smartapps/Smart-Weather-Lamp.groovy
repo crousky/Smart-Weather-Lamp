@@ -23,7 +23,7 @@ import java.util.regex.*
 
 definition(
 	name: "ColorCast Weather Lamp",
-	namespace: "",
+	namespace: "crousky",
 	author: "Joe DiBenedetto",
 	description: "Get a simple visual indicator of the days weather before you leave home. ColorCast will change the color of one or more Hue or LIFX lights to match the weather forecast whenever it's triggered.",
 	category: "Convenience",
